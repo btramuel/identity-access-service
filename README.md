@@ -1,71 +1,62 @@
 🔐 Identity Access Service
-A production-style Spring Boot Identity & Access Management (IAM) service that implements secure authentication and role-based authorization using JWT.
-This project demonstrates real-world backend security architecture, token-based authentication, RBAC design, and clean layered application structure.
+This is a Spring Boot backend project where I built a simple Identity and Access Management (IAM) system using JWT authentication.
+The goal of this project was to understand how authentication and role-based authorization actually work behind the scenes in real applications.
 
-🚀 Why I Built This
-I built this project to strengthen my understanding of:
-Spring Security internals
+🚀 What This Project Does
+Users can register and log in
+Passwords are encrypted using BCrypt
+A JWT token is generated after login
+Protected endpoints require a valid JWT
+Access is controlled using roles (USER, ADMIN)
+Roles can have permissions
+This simulates how real-world backend systems manage authentication and authorization.
+
+🧠 Why I Built It
+I wanted to go deeper into:
+Spring Security
 JWT authentication flow
-Role & permission modeling in relational databases
-Secure API development best practices
-The goal was to simulate how authentication and authorization systems are designed in real enterprise applications.
-
-🧠 What This Project Demonstrates
-✅ Secure REST API design
-✅ JWT authentication implemented from scratch
-✅ Custom Spring Security configuration
-✅ Role-Based Access Control (RBAC)
-✅ Permission-based authorization
-✅ BCrypt password hashing
-✅ Layered backend architecture
-✅ Database seeding for default roles & permissions
+Role-based access control (RBAC)
+Backend security design
+Instead of just following tutorials, I structured it like a real backend service with controllers, services, repositories, and a security layer.
 
 🛠 Tech Stack
 Java 17
 Spring Boot
 Spring Security
-JWT (JSON Web Tokens)
+JWT
 JPA / Hibernate
 Maven
-H2 (configurable for PostgreSQL/MySQL)
+H2 Database (can be switched to MySQL/Postgres)
 
-🏗 Architecture
-The project follows a clean layered structure:
-Controller → Service → Repository → Database
-Security Layer handles:
-JWT validation
-Authentication filtering
-Authorization rules
-Entities:
-AppUser
-Role
-Permission
-Roles map to multiple permissions, and users can have multiple roles.
-
-🔐 Authentication Flow
+🔐 How Authentication Works
 User registers or logs in.
-Credentials are authenticated.
-JWT token is generated and returned.
-Client includes token in request header:
-Authorization: Bearer <JWT_TOKEN>
-Custom JWT filter validates token.
-Access is granted based on assigned roles & permissions.
+The server validates credentials.
+A JWT token is returned.
+The client sends the token in the header:
+Authorization: Bearer <your_token>
+A custom JWT filter validates the token on each request.
+Access is granted based on the user’s roles and permissions.
 
-📌 Sample Endpoints
+📌 Example Endpoints
 Authentication
 POST /auth/register
 POST /auth/login
-User Endpoint (Authenticated Required)
+User Endpoint (requires authentication)
 GET /users
-Admin Endpoint (ADMIN Role Required)
+Admin Endpoint (requires ADMIN role)
 GET /admin
-⚙️ Running Locally
+
+⚙️ Running the Project
+Clone the repo:
+git clone https://github.com/YOUR_USERNAME/identity-access-service.git
+cd identity-access-service
+Build and run:
 mvn clean install
 mvn spring-boot:run
 
-🔮 Future Improvements
-Refresh token support
-Swagger/OpenAPI documentation
-Docker containerization
-OAuth2 / Social login
-Production database configuration
+📈 What This Project Shows
+Clean backend structure
+Secure API design
+JWT authentication implementation
+Role and permission modeling
+Understanding of Spring Security
