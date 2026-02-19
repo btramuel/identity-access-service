@@ -1,62 +1,99 @@
-🔐 Identity Access Service
-This is a Spring Boot backend project where I built a simple Identity and Access Management (IAM) system using JWT authentication.
-The goal of this project was to understand how authentication and role-based authorization actually work behind the scenes in real applications.
+# 🔐 Identity Access Service
 
-🚀 What This Project Does
-Users can register and log in
-Passwords are encrypted using BCrypt
-A JWT token is generated after login
-Protected endpoints require a valid JWT
-Access is controlled using roles (USER, ADMIN)
-Roles can have permissions
-This simulates how real-world backend systems manage authentication and authorization.
+A Spring Boot backend implementing a simple **Identity and Access Management (IAM)** system with JWT authentication and role-based access control (RBAC). Built to understand how authentication and authorization actually work under the hood in real-world backend applications.
 
-🧠 Why I Built It
-I wanted to go deeper into:
-Spring Security
-JWT authentication flow
-Role-based access control (RBAC)
-Backend security design
-Instead of just following tutorials, I structured it like a real backend service with controllers, services, repositories, and a security layer.
+---
 
-🛠 Tech Stack
-Java 17
-Spring Boot
-Spring Security
-JWT
-JPA / Hibernate
-Maven
-H2 Database (can be switched to MySQL/Postgres)
+## 🚀 What It Does
 
-🔐 How Authentication Works
-User registers or logs in.
-The server validates credentials.
-A JWT token is returned.
-The client sends the token in the header:
-Authorization: Bearer <your_token>
-A custom JWT filter validates the token on each request.
-Access is granted based on the user’s roles and permissions.
+- Users can **register** and **log in**
+- Passwords are securely hashed with **BCrypt**
+- A signed **JWT token** is issued on successful login
+- Protected routes require a valid token in the request header
+- Access is controlled via **roles** (`USER`, `ADMIN`) and granular **permissions**
 
-📌 Example Endpoints
-Authentication
-POST /auth/register
-POST /auth/login
-User Endpoint (requires authentication)
-GET /users
-Admin Endpoint (requires ADMIN role)
-GET /admin
+---
 
-⚙️ Running the Project
-Clone the repo:
+## 🔐 How Authentication Works
+
+```
+1. User registers or logs in via /auth/register or /auth/login
+2. Server validates credentials against the database
+3. A signed JWT token is returned to the client
+4. Client sends the token on every subsequent request:
+
+   Authorization: Bearer <your_token>
+
+5. A custom JWT filter intercepts and validates the token
+6. Access is granted or denied based on the user's roles and permissions
+```
+
+---
+
+## 📌 API Endpoints
+
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `POST` | `/auth/register` | Public | Create a new account |
+| `POST` | `/auth/login` | Public | Log in and receive a JWT |
+| `GET` | `/users` | Authenticated | Access user-level data |
+| `GET` | `/admin` | ADMIN only | Access admin-level data |
+
+---
+
+## 🛠 Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| Java 17 | Core language |
+| Spring Boot | Application framework |
+| Spring Security | Authentication & authorization layer |
+| JWT | Stateless token-based auth |
+| JPA / Hibernate | Database ORM |
+| H2 Database | In-memory DB for development (swappable with MySQL/Postgres) |
+| Maven | Build tool |
+
+---
+
+## ⚙️ Running the Project
+
+**1. Clone the repo:**
+```bash
 git clone https://github.com/YOUR_USERNAME/identity-access-service.git
 cd identity-access-service
-Build and run:
+```
+
+**2. Build and run:**
+```bash
 mvn clean install
 mvn spring-boot:run
+```
 
-📈 What This Project Shows
-Clean backend structure
-Secure API design
-JWT authentication implementation
-Role and permission modeling
-Understanding of Spring Security
+The app will start at `http://localhost:8080`.
+
+> The project uses an **H2 in-memory database** by default — no setup needed. To switch to MySQL or PostgreSQL, update `src/main/resources/application.properties` with your database credentials.
+
+---
+
+## 🧠 Why I Built This
+
+Rather than just following tutorials, I wanted to properly understand the security layer that underpins most backend systems. This project gave me hands-on experience with:
+
+- **Spring Security** configuration and filter chains
+- The full **JWT authentication flow** (issue, validate, parse)
+- Designing a **role-based access control (RBAC)** system
+- Structuring a backend with clean separation across controllers, services, repositories, and security layers
+
+---
+
+## 📁 Project Structure
+
+```
+src/main/java/
+├── auth/              # Registration and login logic
+├── config/            # Spring Security and JWT configuration
+├── controller/        # REST endpoints
+├── model/             # User, Role, Permission entities
+├── repository/        # Database access layer
+└── service/           # Business logic
+```
