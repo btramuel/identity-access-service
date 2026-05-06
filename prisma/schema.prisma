@@ -1,0 +1,67 @@
+// ==
+//  1. Purpose
+//     Defines the database tables for the IAM service. Prisma reads
+//     this file and creates the tables in Postgres for us. It also
+//     generates a JavaScript client we can use to query the database.
+//  2. Key Terms and Definitions
+//     model        - one of these blocks turns into one database table
+//     @id          - marks the primary key column
+//     @unique      - no two rows can have the same value in this column
+//     @default     - sets a default value if one isn't given
+//     @@map        - changes the actual table name in the database
+//                    (we use lowercase snake_case names like "users")
+//     relation     - links two tables together. The @relation("Name")
+//                    label is used when two tables are connected in
+//                    more than one way, so Prisma knows which link is which
+//  3. Inputs
+//     - DATABASE_URL from the .env file
+//  4. Output
+//     - A users table, a roles table, a permissions table, plus two
+//       hidden join tables that Prisma makes for us automatically:
+//         _UserRoles        (which users have which roles)
+//         _RolePermissions  (which roles have which permissions)
+//  Plan
+//  ==
+//  1. Set up the generator and datasource at the top
+//  2. Define the User model (username, email, hashed password, roles)
+//  3. Define the Role model (name like "ROLE_USER", linked to users and permissions)
+//  4. Define the Permission model (name like "USER_READ", linked to roles)
+//  ==
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  enabled   Boolean  @default(true)
+  roles     Role[]   @relation("UserRoles")
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  users       User[]       @relation("UserRoles")
+  permissions Permission[] @relation("RolePermissions")
+
+  @@map("roles")
+}
+
+model Permission {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  roles Role[] @relation("RolePermissions")
+
+  @@map("permissions")
+}
