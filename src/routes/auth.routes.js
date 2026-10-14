@@ -3,7 +3,8 @@
 //     the right controller function. Routes don't do any work
 //     themselves; they just point each URL at the function that
 //     should handle it. We also put rate limiting on /auth/login
-//     so people can't try a million passwords in a row.
+//     so people can't try a million passwords in a row, and on
+//     /auth/register so bots can't spam fake accounts.
 //
 // Key Terms and Definitions
 //     express.Router - lets us group related routes together
@@ -16,6 +17,9 @@
 //
 //     max - how many requests are allowed in that window
 //
+//     skipSuccessfulRequests - only count requests that failed. A real
+//     user who logs in fine doesn't use up their tries.
+//
 // Inputs
 //     - HTTP requests starting with /auth
 //
@@ -24,9 +28,10 @@
 //
 //  Plan
 //  1. Make a new Router
-//  2. Set up a rate limiter for the login route (5 tries per 15 min)
-//  3. Wire up POST /register, POST /login, POST /bootstrap-admin
-//  4. Export the router so app.js can plug it in
+//  2. Set up a rate limiter for the login route (5 failed tries per 15 min)
+//  3. Set up a rate limiter for the register route (10 per hour)
+//  4. Wire up POST /register and POST /login
+//  5. Export the router so app.js can plug it in
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
@@ -34,7 +39,6 @@ const rateLimit = require('express-rate-limit');
 const {
   registerHandler,
   loginHandler,
-  bootstrapAdminHandler,
 } = require('../controllers/auth.controller');
 
 const router = express.Router();
@@ -44,13 +48,22 @@ const router = express.Router();
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  skipSuccessfulRequests: true,
   message: { error: 'Too many login attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-router.post('/register', registerHandler);
+// Keep bots from making a pile of accounts from one address
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many accounts created. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/register', registerLimiter, registerHandler);
 router.post('/login', loginLimiter, loginHandler);
-router.post('/bootstrap-admin', bootstrapAdminHandler);
 
 module.exports = router;

@@ -1,8 +1,8 @@
 // Purpose
-//     The functions that actually run when someone hits /auth/register,
-//     /auth/login, or /auth/bootstrap-admin. The controller's job is
-//     to read the request, check the input is valid, hand it off to
-//     the service, and send back a response
+//     The functions that actually run when someone hits /auth/register
+//     or /auth/login. The controller's job is to read the request,
+//     check the input is valid, hand it off to the service, and send
+//     back a response
 //
 // Key Terms and Definitions
 //     controller   - the function tied to a route. It's the bridge
@@ -28,8 +28,11 @@
 //       - call authService.register
 //       - send 201 with the new user
 //  3. Write loginHandler the same way using loginSchema
-//  4. Write bootstrapAdminHandler that makes the first admin account
-//  5. Export the handlers
+//  4. Export the handlers
+//
+//  Note: there used to be a /auth/bootstrap-admin handler here. It was
+//  removed because anyone could call it. The first admin now comes from
+//  "npm run seed" using ADMIN_* values in .env.
 
 const authService = require('../services/auth.service');
 const {
@@ -66,29 +69,7 @@ async function loginHandler(req, res, next) {
   }
 }
 
-async function bootstrapAdminHandler(req, res, next) {
-  // This is the same idea as the /auth/bootstrap-admin endpoint from
-  // the Spring Boot version. It's a shortcut for making the very
-  // first admin user. In a real app you'd remove this once a real
-  // admin exists, or protect it some other way.
-  try {
-    const newAdmin = await authService.registerAdmin({
-      username: 'admin1',
-      email: 'admin1@test.com',
-      password: 'AdminPass123!',
-    });
-
-    return res.status(201).json({
-      message: 'Admin user created',
-      user: newAdmin,
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
 module.exports = {
   registerHandler,
   loginHandler,
-  bootstrapAdminHandler,
 };

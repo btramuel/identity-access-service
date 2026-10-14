@@ -15,38 +15,51 @@
 //
 //     salt rounds - how many times bcrypt scrambles the password.  Higher is safer but slower. 10 is a normal value.
 //
+//     dummy hash - a fake hash we compare against when the username
+//     doesn't exist. bcrypt is slow on purpose, so if we skipped it for
+//     unknown usernames, those requests would come back faster and an
+//     attacker could time the responses to find real usernames.
+//
+//     AppError - our error type that carries an HTTP status (see utils/AppError.js)
+//
 // Inputs
 //     - register: { username, email, password }
 //     - login:    { username, password }
-//     - registerAdmin: { username, email, password } (only used once
-//                       to make the first admin)
 //
 // Output
 //     - register: the new user (without the password)
 //     - login:    a JWT token if the password matches
-//     - throws errors if something is wrong (like a duplicate email
+//     - throws an AppError if something is wrong (like a duplicate email
 //       or a bad password)
 //
 //  Plan
-//  1. Bring in bcrypt, the prisma client, and the JWT helpers
+//  1. Bring in bcrypt, the prisma client, the JWT helper, and AppError
 //  2. Write register():
-//       - check if the username or email is already taken
+//       - check if the username or email is already taken (409)
 //       - find the ROLE_USER row
 //       - hash the password
 //       - create the new user and link them to ROLE_USER
 //  3. Write login():
 //       - find the user by username
-//       - if they don't exist, throw an error
-//       - compare the given password to the hashed one
-//       - if it matches, make a token and return it
-//  4. Write registerAdmin() the same as register but with ROLE_ADMIN
-//  5. Export the functions
+//       - ALWAYS run a bcrypt compare (against a dummy hash if the user
+//         doesn't exist) so every failed login takes the same time
+//       - if the user doesn't exist or the password is wrong, throw 401
+//       - only AFTER the password checks out, check if they're disabled (403)
+//       - make a token and return it
+//  4. Export the functions
+//
+//  Note: the first admin is made by prisma/seed.js, not by an endpoint.
 
 const bcrypt = require('bcrypt');
 const prisma = require('../prisma');
 const { generateToken } = require('../utils/jwt');
+const AppError = require('../utils/AppError');
 
 const SALT_ROUNDS = 10;
+
+// Made once when the server starts. It's the hash of a random string
+// nobody knows, so nothing will ever match it.
+const DUMMY_HASH = bcrypt.hashSync(`no-such-user-${Date.now()}-${Math.random()}`, SALT_ROUNDS);
 
 async function register({ username, email, password }) {
   // Make sure no one else has this username or email
@@ -58,9 +71,9 @@ async function register({ username, email, password }) {
 
   if (existing) {
     if (existing.username === username) {
-      throw new Error('Username already taken');
+      throw new AppError('Username already taken', 409);
     } else {
-      throw new Error('Email already in use');
+      throw new AppError('Email already in use', 409);
     }
   }
 
@@ -70,7 +83,8 @@ async function register({ username, email, password }) {
   });
 
   if (!userRole) {
-    // This shouldn't happen if the seed script was run
+    // This shouldn't happen if the seed script was run. Plain Error on
+    // purpose so it shows up as a 500 and gets logged.
     throw new Error('ROLE_USER does not exist. Did you run the seed script?');
   }
 
@@ -104,67 +118,28 @@ async function login({ username, password }) {
     include: { roles: true },
   });
 
-  if (!user) {
-    // We say "Invalid credentials" instead of "user not found"
-    // so attackers can't tell which usernames exist
-    throw new Error('Invalid credentials');
+  // Always run bcrypt, even when the user doesn't exist, so a wrong
+  // username takes just as long as a wrong password
+  const hashToCheck = user ? user.password : DUMMY_HASH;
+  const passwordMatches = await bcrypt.compare(password, hashToCheck);
+
+  // Same message for both cases so attackers can't tell which usernames exist
+  if (!user || !passwordMatches) {
+    throw new AppError('Invalid credentials', 401);
   }
 
+  // Only check this after the password is right. Otherwise anyone could
+  // find out an account is disabled without knowing the password.
   if (!user.enabled) {
-    throw new Error('Account is disabled');
-  }
-
-  // Check if the password they typed matches the hashed one we saved
-  const passwordMatches = await bcrypt.compare(password, user.password);
-  if (!passwordMatches) {
-    throw new Error('Invalid credentials');
+    throw new AppError('Account is disabled', 403);
   }
 
   // Make a token and send it back
-  const token = generateToken(user.username);
+  const token = generateToken(user.id);
   return { token, username: user.username };
-}
-
-async function registerAdmin({ username, email, password }) {
-  // Same idea as register() but uses ROLE_ADMIN instead
-  const existing = await prisma.user.findFirst({
-    where: {
-      OR: [{ username }, { email }],
-    },
-  });
-
-  if (existing) {
-    throw new Error('Username or email already in use');
-  }
-
-  const adminRole = await prisma.role.findUnique({
-    where: { name: 'ROLE_ADMIN' },
-  });
-
-  if (!adminRole) {
-    throw new Error('ROLE_ADMIN does not exist. Did you run the seed script?');
-  }
-
-  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-  const newAdmin = await prisma.user.create({
-    data: {
-      username,
-      email,
-      password: hashedPassword,
-      roles: {
-        connect: [{ id: adminRole.id }],
-      },
-    },
-    include: { roles: true },
-  });
-
-  const { password: _, ...safeUser } = newAdmin;
-  return safeUser;
 }
 
 module.exports = {
   register,
   login,
-  registerAdmin,
 };

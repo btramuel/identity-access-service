@@ -15,6 +15,13 @@
 //     parse - run the data through the schema. If it doesn't
 //     match, zod throws an error.
 //
+//     trim / toLowerCase - clean up the value before we use it, so
+//     " Brian@Test.com" and "brian@test.com" count as the same email
+//
+//     72 bytes - bcrypt only looks at the first 72 bytes of a password
+//     and ignores the rest, so we cap it there. Two long passwords that
+//     start the same would otherwise match each other.
+//
 // Inputs
 //     - The request body from the user (usually req.body)
 //
@@ -24,21 +31,34 @@
 //
 //  Plan
 //  1. Bring in zod
-//  2. Make a schema for register (username, email, password)
+//  2. Make a schema for register (username, email, password) with
+//     min and max lengths, and lowercase the email
 //  3. Make a schema for login (username, password)
 //  4. Export both schemas
 
 const { z } = require('zod');
 
 const registerSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  email: z.string().email('Email must be a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  username: z
+    .string()
+    .trim()
+    .min(3, 'Username must be at least 3 characters')
+    .max(32, 'Username must be 32 characters or less'),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email('Email must be a valid email address')
+    .max(254, 'Email is too long'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .refine((p) => Buffer.byteLength(p, 'utf8') <= 72, 'Password must be 72 bytes or less'),
 });
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
+  username: z.string().trim().min(1, 'Username is required').max(32, 'Username is too long'),
+  password: z.string().min(1, 'Password is required').max(200, 'Password is too long'),
 });
 
 module.exports = {

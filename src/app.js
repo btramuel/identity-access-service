@@ -9,8 +9,10 @@
 //     incoming requests and turns it into a real JavaScript object on req.body
 //
 //     CORS- "Cross-Origin Resource Sharing". Lets a
-//     front-end on a different domain (like localhost:3000) talk to this API. 
-//     Without it, the browser would block those requests.
+//     front-end on a different domain (like localhost:3000) talk to this API.
+//     Without it, the browser would block those requests. We only allow
+//     the origin set in CORS_ORIGIN, or any origin if it's left blank
+//     (handy for local dev, not for a real deploy).
 //
 //     mount path - the URL prefix a router gets. For example,
 //     app.use('/auth', authRoutes) means a route defined as POST /register inside authRoutes
@@ -21,13 +23,14 @@
 //
 //  Inputs
 //     - Incoming HTTP requests
+//     - CORS_ORIGIN from .env (optional)
 //
 //  Output
 //     - The configured Express app, ready to be started by server.js
 //
 //  Plan
 //  1. Make a new Express app
-//  2. Plug in CORS and the JSON body parser
+//  2. Plug in CORS (locked to CORS_ORIGIN if set) and the JSON body parser
 //  3. Add a basic GET / route that says the API is alive
 //  4. Mount /auth, /users, /admin
 //  5. Add a 404 handler for any URL that doesn't match
@@ -44,8 +47,10 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// Let other domains call our API
-app.use(cors());
+// Only let our own front-end call the API from a browser. If CORS_ORIGIN
+// isn't set, allow everything (fine for local dev only).
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+app.use(cors({ origin: corsOrigin }));
 
 // Read JSON request bodies
 app.use(express.json());
